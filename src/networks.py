@@ -29,7 +29,7 @@ class ModifiedVGG16(nn.Module):
     def make_model(self):
         """Creates the model."""
         # Get the pretrained model.
-        vgg16 = models.vgg16(pretrained=True)
+        vgg16 = models.vgg16(pretrained=True) #load vgg model pretrained on ImageNet
         self.datasets, self.classifiers = [], nn.ModuleList()
 
         idx = 6
