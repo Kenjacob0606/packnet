@@ -11,6 +11,7 @@ import torch.optim as optim
 import torchnet as tnt
 from torch.autograd import Variable
 from tqdm import tqdm
+# import torchtnt as tnt
 
 import dataset
 import networks as net
@@ -82,11 +83,11 @@ class Manager(object):
     """Handles training and pruning."""
 
     def __init__(self, args, model, previous_masks, dataset2idx, dataset2biases):
-        self.args = args
-        self.cuda = args.cuda
+        self.args = args #cmd args
+        self.cuda = args.cuda 
         self.model = model
-        self.dataset2idx = dataset2idx
-        self.dataset2biases = dataset2biases
+        self.dataset2idx = dataset2idx #maps dataset name to dataset index, which is used for masking
+        self.dataset2biases = dataset2biases #maps dataset name to biases
 
         if args.mode != 'check':
             # Set up data loader, criterion, and pruner.
@@ -106,12 +107,12 @@ class Manager(object):
                 self.model, self.args.prune_perc_per_layer, previous_masks,
                 self.args.train_biases, self.args.train_bn)
 
-    def eval(self, dataset_idx, biases=None):
+    def eval(self, dataset_idx, biases=None): #which task/dataset to evaulate on
         """Performs evaluation."""
-        if not self.args.disable_pruning_mask:
+        if not self.args.disable_pruning_mask: #selects only the weights for selected task and sets rest to 0
             self.pruner.apply_mask(dataset_idx)
         if biases is not None:
-            self.pruner.restore_biases(biases)
+            self.pruner.restore_biases(biases) #restore biases for the task being evaluated, if separate biases are being used
 
         self.model.eval()
         error_meter = None
@@ -126,19 +127,19 @@ class Manager(object):
 
             # Init error meter.
             if error_meter is None:
-                topk = [1]
+                topk = [1] #top-1 error
                 if output.size(1) > 5:
-                    topk.append(5)
+                    topk.append(5) #top-5 error only makes sense if there are more than 5 classes
                 error_meter = tnt.meter.ClassErrorMeter(topk=topk)
-            error_meter.add(output.data, label)
+            error_meter.add(output.data, label) #compares predictions to labels and accumulates error stats
 
         errors = error_meter.value()
         print('Error: ' + ', '.join('@%s=%.2f' %
-                                    t for t in zip(topk, errors)))
+                                    t for t in zip(topk, errors))) #eg Error: @1=12.34, @5=3.21
         if self.args.train_bn:
             self.model.train()
         else:
-            self.model.train_nobn()
+            self.model.train_nobn() #if no batch norm
         return errors
 
     def do_batch(self, optimizer, batch, label):
@@ -146,26 +147,27 @@ class Manager(object):
         if self.cuda:
             batch = batch.cuda()
             label = label.cuda()
-        batch = Variable(batch)
+        batch = Variable(batch) #dont need "Variable" in newer versions of PyTorch, but this code is from 2018
         label = Variable(label)
 
         # Set grads to 0.
-        self.model.zero_grad()
+        self.model.zero_grad() #clear grad from previous batch
 
         # Do forward-backward.
         output = self.model(batch)
         self.criterion(output, label).backward()
 
         # Set fixed param grads to 0.
-        if not self.args.disable_pruning_mask:
-            self.pruner.make_grads_zero()
+        if not self.args.disable_pruning_mask: #Weights belonging to previous tasks and Pruned weights grads are set to 0.
+            self.pruner.make_grads_zero()      #so only weights belonging to current task and not pruned will be updated in this batch.
+                                                
 
         # Update params.
         optimizer.step()
 
         # Set pruned weights to 0.
-        if not self.args.disable_pruning_mask:
-            self.pruner.make_pruned_zero()
+        if not self.args.disable_pruning_mask: #Because optimizers like Adam can: Slightly modify weights even if gradient was zero, Due to momentum terms
+            self.pruner.make_pruned_zero()     #therefore, Forces pruned weights back to exactly zero
 
     def do_epoch(self, epoch_idx, optimizer):
         """Trains model for one epoch."""
