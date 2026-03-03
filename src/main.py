@@ -208,7 +208,7 @@ class Manager(object):
             epoch_idx = idx + 1
             print('Epoch: %d' % (epoch_idx))
 
-            optimizer = utils.step_lr(epoch_idx, self.args.lr, self.args.lr_decay_every,
+            optimizer = utils.step_lr(epoch_idx, self.args.lr, self.args.lr_decay_every, #adjust learning rate 
                                       self.args.lr_decay_factor, optimizer)
             if self.args.train_bn:
                 self.model.train()
@@ -244,7 +244,7 @@ class Manager(object):
         self.eval(self.pruner.current_dataset_idx)
 
         self.pruner.prune()
-        self.check(True)
+        self.check(True) #make sure the layers are pruned as expected, and print out how much each layer is pruned
 
         print('\nPost-prune eval:')
         errors = self.eval(self.pruner.current_dataset_idx)
