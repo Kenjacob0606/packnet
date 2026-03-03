@@ -29,7 +29,7 @@ class ModifiedVGG16(nn.Module):
     def make_model(self):
         """Creates the model."""
         # Get the pretrained model.
-        vgg16 = models.vgg16(pretrained=True) #load vgg model pretrained on ImageNet
+        vgg16 = models.vgg16(pretrained=True) #load vgg model with weights pretrained on ImageNet
         self.datasets, self.classifiers = [], nn.ModuleList()
 
         idx = 6
@@ -44,8 +44,9 @@ class ModifiedVGG16(nn.Module):
                     self.classifiers.append(module)
                 idx += 1
         features = list(vgg16.features.children())
+        #manually add fc layers
         features.extend([
-            View(-1, 25088),
+            View(-1, 25088), #flatten the output of conv layers
             fc6,
             nn.ReLU(inplace=True),
             nn.Dropout(),
