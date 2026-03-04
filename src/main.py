@@ -329,7 +329,7 @@ def main():
         model = net.ModifiedVGG16()
         previous_masks = []
     else:
-        ckpt = torch.load(args.loadname)
+        ckpt = torch.load(args.loadname, weights_only=False) #added weights_only since new pytorch ver req it
         model = ckpt['model']
         previous_masks = ckpt['previous_masks']
         dataset2idx = ckpt['dataset2idx']
