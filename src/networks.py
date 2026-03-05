@@ -104,7 +104,7 @@ class ModifiedVGG16(nn.Module):
         print(torch.sum(torch.abs(fc_output - conv_output)))
         assert torch.sum(torch.abs(fc_output - conv_output)).data[0] < 1e-8
         print('Check passed')
-        raw_input()
+        input() #changed raw_input to input since raw_input is older version of python
 
 
 class ModifiedVGG16BN(ModifiedVGG16):
@@ -246,7 +246,7 @@ class ModifiedDenseNet(ModifiedVGG16):
     def forward(self, x):
         features = self.shared(x)
         out = F.relu(features, inplace=True)
-        out = F.avg_pool2d(out, kernel_size=7).view(features.size(0), -1)
+        out = F.AdaptiveAvgPool2d(out,(1, 1)).view(features.size(0), -1)
         out = self.classifier(out)
         return out
 
